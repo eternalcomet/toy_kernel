@@ -1,10 +1,15 @@
+%include "boot/gdt.inc"
+%define pos(x,y) (80*(x)+(y))*2 ; 
+
 org 0x7c00 ; in legacy boot mode, the bootloader will be load to  0x7c00
 
+[BITS 16]
 main:
     ; init stack
     mov ax, cs
     mov ds, ax
     mov es, ax
+    mov gs, ax
     mov ss, ax
     mov sp, 0x7c00
 
@@ -14,7 +19,20 @@ main:
     mov  cx, len
     call print
 
-    jmp exit
+    ; enable_A20
+    cli
+    in  al,   0x92
+    or  al,   0010b
+    out 0x92, al
+
+    ; protected mode
+    lgdt [gdt_reg]
+    mov  eax, cr0
+    or   eax, 0x00000001
+    mov  cr0, eax
+    jmp  dword (DESC_CODE - GDT) : protected_main
+
+    jmp $
 
 clear_screen:
     mov ah, 0x00 ; modify video mode
@@ -32,13 +50,32 @@ print:
     int 0x10       ; call BIOS function
     ret
 
-exit:
-    hlt
-    jmp exit
+
+[BITS 32]
+protected_main:
+    mov ax,       DESC_VIDEO - GDT
+    mov gs,       ax
+    mov ah,       00001100b        ; black bg, red fg
+    mov al,       'P'
+    mov edi,      pos(5, 5)
+    mov [gs:edi], ax
+    jmp $
+
     
-msg              db  "Hello World!"
-len              equ $ - msg
+%define endl 0x0d,0x0a
+msg     db  "Hello World!",endl
+len     equ $ - msg
+
+GDT:
+DESC_NULL:  descriptor          0,          0, 0
+DESC_CODE:  descriptor          0, 0xffffffff, GDT_TYPE_EXECUTABLE | GDT_TYPE_EXEC_READABLE | GDT_TYPE_NON_SYSTEM | GDT_PROTECTED_MODE | GDT_PRESENT
+DESC_DATA:  descriptor          0, 0xffffffff, GDT_TYPE_DATA_WRITABLE | GDT_TYPE_NON_SYSTEM | GDT_PROTECTED_MODE | GDT_PRESENT
+DESC_VIDEO: descriptor    0xb8000, 0xffffffff, GDT_TYPE_DATA_WRITABLE | GDT_TYPE_NON_SYSTEM | GDT_PROTECTED_MODE | GDT_PRESENT
+
+gdt_len equ $ - GDT
+gdt_reg dw  gdt_len - 1         ; the length of gdt minus 1
+        dd GDT ; the address of gdt
 
 ; fill remain space with 0
 ; disk signature starts at offset 0x01b8(440), and partition table starts at offset 0x01be
-times 440-($-$$) db  0
+times 440-($-$$) db 0

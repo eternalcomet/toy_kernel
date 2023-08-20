@@ -3,7 +3,7 @@
 ## Get started
 
 - Developing environment: Ubuntu
-- Install dependendices:  `sudo apt install nasm make fdisk kpartx qemu-system-x86_64`
+- Install dependendices:  `sudo apt install nasm make fdisk kpartx qemu-system-x86`
 
 ## Build & Run
 
