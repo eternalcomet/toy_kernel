@@ -7,5 +7,6 @@
 
 ## Build & Run
 
-- run `make` to build and run the os in qemu Virtual Machine.
-- run `make build` to build the os image only.
+- run `make` to build and run the os in qemu.
+- run `make install` to build the os and install it into the disk image.
+- run `make build_all` to build the os image only.

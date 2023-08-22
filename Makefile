@@ -1,7 +1,8 @@
 # -----------Product Config-----------
 # product name
 PRODUCT_NAME = TOY_OS
-BUILD_DIR = build
+BUILD_DIR ?= out
+BUILD_BOOT_DIR = $(BUILD_DIR)/boot
 # -----------Disk Image Config-----------
 # image file name
 DISK_IMAGE = $(BUILD_DIR)/disk.img
@@ -20,16 +21,20 @@ MOUNT_POINT ?= /mnt/toy_os
 # -----------C Compiler Config-----------
 CFLAGS = -Wall -static -fno-stack-protector -m32 -I.
 
-.PHONY: clean mount unmount build run
+.PHONY: clean mount unmount build_all run install
 
 # -----------make-----------
-run: build
+run: install
 	qemu-system-x86_64 -drive file=$(DISK_IMAGE),format=raw
 
-build: $(BUILD_DIR)/flag_installed
+install: build_all $(BUILD_BOOT_DIR)/flag_boot_installed
 
-$(BUILD_DIR):
-	mkdir -p $@
+build_all: $(BUILD_DIR)/flag_inited $(BUILD_DIR)/boot/mbr_boot.bin
+
+$(BUILD_DIR)/flag_inited:
+	mkdir -p $(BUILD_DIR)
+	mkdir -p $(BUILD_BOOT_DIR)
+	touch $@
 
 # make disk image
 $(DISK_IMAGE):
@@ -40,16 +45,11 @@ $(DISK_IMAGE):
 	# format the partition as FAT32
 	mkfs.vfat -F 32 -n "$(PRODUCT_NAME)" --offset $(PART_START) $@
 
-# -----------MBR Boot Code-----------
-BUILD_BOOT_DIR = $(BUILD_DIR)/boot
 
-$(BUILD_BOOT_DIR): $(BUILD_DIR)
-	mkdir -p $@
-
-$(BUILD_BOOT_DIR)/mbr_boot_asm.o: boot/mbr_boot.asm $(BUILD_BOOT_DIR)
+$(BUILD_BOOT_DIR)/mbr_boot_asm.o: boot/mbr_boot.asm
 	nasm $< -f elf32 -o $(BUILD_BOOT_DIR)/mbr_boot_asm.o
 
-$(BUILD_BOOT_DIR)/mbr_boot_c.o: boot/mbr_boot.c $(BUILD_BOOT_DIR)
+$(BUILD_BOOT_DIR)/mbr_boot_c.o: boot/mbr_boot.c
 	gcc $(CFLAGS) -nostdinc -fno-builtin -fno-pie -fno-pic -fno-omit-frame-pointer -fno-strict-aliasing -s -c -o $(BUILD_BOOT_DIR)/mbr_boot_c.o $<
 
 $(BUILD_BOOT_DIR)/mbr_boot.o: $(BUILD_BOOT_DIR)/mbr_boot_asm.o $(BUILD_BOOT_DIR)/mbr_boot_c.o
@@ -58,20 +58,20 @@ $(BUILD_BOOT_DIR)/mbr_boot.o: $(BUILD_BOOT_DIR)/mbr_boot_asm.o $(BUILD_BOOT_DIR)
 	# -e: Set entry point
 	# -Ttext: Set address of .text section
 	# -s: Strip all symbols
-	ld -m elf_i386 -N -e asm_main -Ttext 0x7c00 -s $(BUILD_BOOT_DIR)/mbr_boot_asm.o $(BUILD_BOOT_DIR)/mbr_boot_c.o -o $(BUILD_BOOT_DIR)/mbr_boot.o
+	ld -m elf_i386 -N -e boot_main -Ttext 0x7c00 -s $(BUILD_BOOT_DIR)/mbr_boot_asm.o $(BUILD_BOOT_DIR)/mbr_boot_c.o -o $(BUILD_BOOT_DIR)/mbr_boot.o
 
 $(BUILD_BOOT_DIR)/mbr_boot.bin: $(BUILD_BOOT_DIR)/mbr_boot.o
 	# param explaination:
 	# -S: Strip all symbols and relocation information
 	# -O: Output target
-	# -j .text: Only copy section .text into the output
+	# -j <name>: Only copy section <name> into the output
 	objcopy -S -O binary -j .text -j .rodata $(BUILD_BOOT_DIR)/mbr_boot.o $(BUILD_BOOT_DIR)/mbr_boot.bin
 
-$(BUILD_DIR)/flag_installed: $(BUILD_DIR)/boot/mbr_boot.bin $(DISK_IMAGE)
+$(BUILD_BOOT_DIR)/flag_boot_installed: $(BUILD_BOOT_DIR)/mbr_boot.bin $(DISK_IMAGE)
 	# make sure the size is less than 440 bytes
-	[ $(shell stat -c %s build/boot/mbr_boot.bin) -lt 440 ]
+	[ $(shell stat -c %s $(BUILD_BOOT_DIR)/mbr_boot.bin) -lt 440 ]
 	dd if=$< of=$(DISK_IMAGE) bs=440 count=1 conv=notrunc
-	touch $(BUILD_DIR)/flag_installed
+	touch $@
 
 # -----------clean-----------
 clean:
