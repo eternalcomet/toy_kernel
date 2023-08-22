@@ -1,10 +1,17 @@
-%include "boot/gdt.inc"
-%define pos(x,y) (80*(x)+(y))*2 ; 
+%include "boot/gdt.inc" ; GDT descriptor structure
+%define pos(x,y) (80*(x)+(y))*2 ; 80x25 screen position
 
-org 0x7c00 ; in legacy boot mode, the bootloader will be load to  0x7c00
+; In legacy boot mode, the bootloader will be load to 0x7c00, so we need `org 0x7c00`
+; Now we will compile our code into a relocatable file, the offset `0x7c00` should be specified to the linker `ld` but not here.
+; org 0x7c00
+
+extern main      ; external c main function
+global boot_main ; asm entry point for the linker
+
+; strip most of the debug output to minimize the binary size
 
 [BITS 16]
-main:
+boot_main:
     ; init stack
     mov ax, cs
     mov ds, ax
@@ -13,11 +20,10 @@ main:
     mov ss, ax
     mov sp, 0x7c00
 
-    ; print hello world
-    call clear_screen
-    mov  ax, msg
-    mov  cx, len
-    call print
+    ; clear screen
+    mov ah, 0x00 ; new video mode
+    mov al, 0x03 ; 80x25 color text mode
+    int 0x10     ; modify video mode will clear the screen
 
     ; enable_A20
     cli
@@ -32,50 +38,26 @@ main:
     mov  cr0, eax
     jmp  dword (DESC_CODE - GDT) : protected_main
 
-    jmp $
-
-clear_screen:
-    mov ah, 0x00 ; modify video mode
-    mov al, 0x03 ; 80x25 color text mode
-    int 0x10
-    ret
-
-print: 
-    ;; @param ax: string address (es:ax)
-    ;; @param cx: string length
-    mov bp, ax     ; es:bp = string address
-    mov ax, 0x1301 ; ah = 0x13 : display string
-    mov bx, 0x000c ; bh = page number, bl = tty color
-    mov dl, 0
-    int 0x10       ; call BIOS function
-    ret
-
-
 [BITS 32]
 protected_main:
-    mov ax,       DESC_VIDEO - GDT
-    mov gs,       ax
-    mov ah,       00001100b        ; black bg, red fg
-    mov al,       'P'
-    mov edi,      pos(5, 5)
-    mov [gs:edi], ax
-    jmp $
+    ; prepare segments for c codes
+    mov  ax,  DESC_DATA - GDT
+    mov  ds,  ax
+    mov  es,  ax
+    mov  ss,  ax
+    mov  esp, 0x7c00
+    mov  ax,  0
+    mov  fs,  ax
+    mov  gs,  ax
+    call main                 ; should never return
 
-    
-%define endl 0x0d,0x0a
-msg     db  "Hello World!",endl
-len     equ $ - msg
+    jmp $
 
 GDT:
 DESC_NULL:  descriptor          0,          0, 0
 DESC_CODE:  descriptor          0, 0xffffffff, GDT_TYPE_EXECUTABLE | GDT_TYPE_EXEC_READABLE | GDT_TYPE_NON_SYSTEM | GDT_PROTECTED_MODE | GDT_PRESENT
 DESC_DATA:  descriptor          0, 0xffffffff, GDT_TYPE_DATA_WRITABLE | GDT_TYPE_NON_SYSTEM | GDT_PROTECTED_MODE | GDT_PRESENT
-DESC_VIDEO: descriptor    0xb8000, 0xffffffff, GDT_TYPE_DATA_WRITABLE | GDT_TYPE_NON_SYSTEM | GDT_PROTECTED_MODE | GDT_PRESENT
 
 gdt_len equ $ - GDT
-gdt_reg dw  gdt_len - 1         ; the length of gdt minus 1
+gdt_reg dw  gdt_len - 1 ; the length of gdt minus 1
         dd GDT ; the address of gdt
-
-; fill remain space with 0
-; disk signature starts at offset 0x01b8(440), and partition table starts at offset 0x01be
-times 440-($-$$) db 0

@@ -17,13 +17,16 @@ PART_END = $(shell echo $$((($(DISK_SIZE) * 1024 * 1024) / $(SECTOR_SIZE) - 1)))
 TYPE = 0c
 # mount point
 MOUNT_POINT ?= /mnt/toy_os
+# -----------C Compiler Config-----------
+CFLAGS = -Wall -static -fno-stack-protector -m32 -I.
 
-.PHONY: clean mount unmount write_bootable build run
+.PHONY: clean mount unmount build run
+
 # -----------make-----------
 run: build
 	qemu-system-x86_64 -drive file=$(DISK_IMAGE),format=raw
 
-build: write_bootable
+build: $(BUILD_DIR)/flag_installed
 
 $(BUILD_DIR):
 	mkdir -p $@
@@ -37,12 +40,38 @@ $(DISK_IMAGE):
 	# format the partition as FAT32
 	mkfs.vfat -F 32 -n "$(PRODUCT_NAME)" --offset $(PART_START) $@
 
-$(BUILD_DIR)/boot/mbr_boot.bin: boot/mbr_boot.asm
-	mkdir -p $(BUILD_DIR)/boot
-	nasm $< -o $@
+# -----------MBR Boot Code-----------
+BUILD_BOOT_DIR = $(BUILD_DIR)/boot
 
-write_bootable: $(BUILD_DIR)/boot/mbr_boot.bin $(DISK_IMAGE)
+$(BUILD_BOOT_DIR): $(BUILD_DIR)
+	mkdir -p $@
+
+$(BUILD_BOOT_DIR)/mbr_boot_asm.o: boot/mbr_boot.asm $(BUILD_BOOT_DIR)
+	nasm $< -f elf32 -o $(BUILD_BOOT_DIR)/mbr_boot_asm.o
+
+$(BUILD_BOOT_DIR)/mbr_boot_c.o: boot/mbr_boot.c $(BUILD_BOOT_DIR)
+	gcc $(CFLAGS) -nostdinc -fno-builtin -fno-pie -fno-pic -fno-omit-frame-pointer -fno-strict-aliasing -s -c -o $(BUILD_BOOT_DIR)/mbr_boot_c.o $<
+
+$(BUILD_BOOT_DIR)/mbr_boot.o: $(BUILD_BOOT_DIR)/mbr_boot_asm.o $(BUILD_BOOT_DIR)/mbr_boot_c.o
+	# param explaination:
+	# -N: Do not page align data, do not make text readonly
+	# -e: Set entry point
+	# -Ttext: Set address of .text section
+	# -s: Strip all symbols
+	ld -m elf_i386 -N -e asm_main -Ttext 0x7c00 -s $(BUILD_BOOT_DIR)/mbr_boot_asm.o $(BUILD_BOOT_DIR)/mbr_boot_c.o -o $(BUILD_BOOT_DIR)/mbr_boot.o
+
+$(BUILD_BOOT_DIR)/mbr_boot.bin: $(BUILD_BOOT_DIR)/mbr_boot.o
+	# param explaination:
+	# -S: Strip all symbols and relocation information
+	# -O: Output target
+	# -j .text: Only copy section .text into the output
+	objcopy -S -O binary -j .text -j .rodata $(BUILD_BOOT_DIR)/mbr_boot.o $(BUILD_BOOT_DIR)/mbr_boot.bin
+
+$(BUILD_DIR)/flag_installed: $(BUILD_DIR)/boot/mbr_boot.bin $(DISK_IMAGE)
+	# make sure the size is less than 440 bytes
+	[ $(shell stat -c %s build/boot/mbr_boot.bin) -lt 440 ]
 	dd if=$< of=$(DISK_IMAGE) bs=440 count=1 conv=notrunc
+	touch $(BUILD_DIR)/flag_installed
 
 # -----------clean-----------
 clean:
