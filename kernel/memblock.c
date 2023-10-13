@@ -269,6 +269,15 @@ int memblock_free(u64 base, u64 size){
   return memblock_remove_range(&memblock.reserved, base, size);
 }
 
+void print_memblock(struct memblock_type* type){
+  int i = 0;
+  struct memblock_region* rgn;
+
+  for_each_memblock_type(i, type, rgn){
+    cprintf("%l %l\n", rgn->base, rgn->base + rgn->size);
+  }
+}
+
 void memblock_init(){
   struct MEMORY_E820* ARDS = (struct MEMORY_E820*)(KERNBASE+ARDSOFFSET);
   u32 mem_tot = 0;
@@ -282,4 +291,5 @@ void memblock_init(){
     }
   }
   cprintf("%dMB\n",mem_tot/1048576 + 1);
+  print_memblock(&memblock.memory);
 }
