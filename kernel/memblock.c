@@ -40,6 +40,7 @@ void memblock_merge_regions(struct memblock_type* type){
   }
 }
 
+// Remove the region index i and move the next regions to the corret posistion
 void memblock_remove_region(struct memblock_type* type, u64 i){
   //cprintf("test");
   type->total_size -= type->regions[i].size;
@@ -109,14 +110,18 @@ int memblock_add_regions(struct memblock_type* type,u64 base,u64 size){
     }
 }
 
+// Add one memory segment to the memory_type
 int memblock_add(u64 base, u64 size){
   return memblock_add_regions(&memblock.memory, base, size);
 }
 
+// Add one memory segment to the reserved_type 
 int memblock_reserve(u64 base, u64 size){
   return memblock_add_regions(&memblock.reserved, base, size);
 }
 
+// Find the memory segment that in type_a but not in type_b
+// Compare the segment in type_a and interval in type_b to get the segment 
 void __next_mem_range_rev(u64* idx, struct memblock_type* type_a, struct memblock_type* type_b, u64 *out_start, u64 *out_end){
   
   
@@ -176,6 +181,7 @@ void __next_mem_range_rev(u64* idx, struct memblock_type* type_a, struct membloc
   *idx = ULLONG_MAX;
 }
 
+// Find from high address to low address
 u64 __memblock_find_range_top_down(u64 start, u64 end, u64 size, u64 align){
   u64 this_start, this_end, cand;
   u64 i;
@@ -201,6 +207,7 @@ u64 __memblock_find_range_top_down(u64 start, u64 end, u64 size, u64 align){
   return 0;       
 }
 
+// Find the suitable memory segment
 u64 memblock_find_in_range(u64 size, u64 align, u64 start, u64 end){
 
   if(end == MEMBLOCK_ALLOC_ACCESSIBLE)
@@ -213,6 +220,7 @@ u64 memblock_find_in_range(u64 size, u64 align, u64 start, u64 end){
   return __memblock_find_range_top_down(start, end, size, align);
 }
 
+// Find suitable memory and add it to reserve
 static u64 memblock_alloc_range(u64 size, u64 align, u64 start, u64 end){
   u64 found;
 
@@ -244,6 +252,7 @@ u64 memblock_alloc(u64 size, u64 align){
   return memblock_alloc_base(size, align, MEMBLOCK_ALLOC_ACCESSIBLE);
 }
 
+// Split the range into some regions that index from start_rgn to end_rgn
 int memblock_isolate_range(struct memblock_type* type, u64 base, u64 size, int *start_rgn, int *end_rgn){
   u64 end = base + size;
   int idx;
@@ -285,6 +294,7 @@ int memblock_isolate_range(struct memblock_type* type, u64 base, u64 size, int *
   return 0;
 }
 
+// Remove regions from reserved_type
 int memblock_remove_range(struct memblock_type* type, u64 base, u64 size){
   int start_rgn, end_rgn;
   int i,ret;
@@ -297,6 +307,7 @@ int memblock_remove_range(struct memblock_type* type, u64 base, u64 size){
     memblock_remove_region(type, i);
 }
 
+// Free the physical memory
 int memblock_free(u64 base, u64 size){
   u64 end = base + size -1;
 
@@ -304,6 +315,7 @@ int memblock_free(u64 base, u64 size){
   return memblock_remove_range(&memblock.reserved, base, size);
 }
 
+// Print the memblock_type entry
 void print_memblock(struct memblock_type* type){
   int i = 0;
   struct memblock_region* rgn;
@@ -315,6 +327,7 @@ void print_memblock(struct memblock_type* type){
 
 void memblock_test();
 
+// Init the memblock
 void memblock_init(){
   memblock.current_limit = 0;
   struct MEMORY_E820* ARDS = (struct MEMORY_E820*)(KERNBASE+ARDSOFFSET);
