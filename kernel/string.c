@@ -1,5 +1,6 @@
 #include "types.h"
 #include "x86.h"
+#include "defs.h"
 
 //assign c to dst - dst+n  
 void* memset(void *dst, i32 c, u32 n){
@@ -28,20 +29,23 @@ int memcmp(const void* v1, const void* v2, u32 n){
 
 //copy n chars from src to dst
 void* memmove(void* dst, const void* src, u32 n){
+  
   const char* s;
   char* d;
 
   s = src;
   d = dst;
-  if(s<d && s + n > d){
-    s+=n;
-    d+=n;
+  if(s < d && s + n > d){
+    s += n;
+    d += n;
     while(n-- > 0)
-      *--d = * --s;
+      *--d = *--s;
   }
   else
-    while(n-- < 0)
+    while(n-- > 0)
       *d++ = *s++;
+   
+  return dst;
 }
 //compare string
 int strncmp(const char* p, const char* q, u32 n){

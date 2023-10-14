@@ -9,17 +9,22 @@ struct memblock_region{
 };
 
 struct memblock_type{
-  u64 cnt;
+  u32 cnt;
   u64 max;
   u64 total_size;
-  struct memblock_region* regions;
+  struct memblock_region regions[128];
   char* name;
 };
 
 struct memblock{
+  u64 current_limit;
   struct memblock_type memory;
   struct memblock_type reserved;
 }memblock;
+
+#define __round_mask(x, y) ((__typeof__(x))((y)-1))
+#define round_up(x, y) ((((x)-1) | __round_mask(x, y))+1)
+#define round_down(x, y) ((x) & ~__round_mask(x, y))
 
 #define for_each_free_mem_range_reserve(i, p_start, p_end) \
         for_each_mem_range_rev(i, &memblock.memory, &memblock.reserved, p_start, p_end)
