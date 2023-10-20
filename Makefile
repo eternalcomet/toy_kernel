@@ -122,10 +122,10 @@ qemu-memfs: xv6memfs.img
 qemu-nox: xv6.img
 	$(QEMU) -nographic $(QEMUOPTS)
 
-.gdbinit: tools/gdbinit.tmpl
+out/.gdbinit: tools/gdbinit.tmpl
 	sed "s/localhost:1234/localhost:$(GDBPORT)/" < $^ > $@
 
-qemu-gdb: xv6.img .gdbinit
+qemu-gdb: xv6.img out/.gdbinit
 	@echo "*** Now run 'gdb'." 1>&2
 	$(QEMU) -serial mon:stdio $(QEMUOPTS) -S $(QEMUGDB)
 
