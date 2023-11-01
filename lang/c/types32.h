@@ -12,3 +12,7 @@ typedef float f32;
 typedef double f64;
 
 typedef u8 byte;
+
+#define bool	_Bool
+#define true	1
+#define false	0

@@ -47,10 +47,11 @@ $(DISK_IMAGE):
 
 
 $(BUILD_BOOT_DIR)/mbr_boot_asm.o: boot/mbr_boot.asm
+	mkdir -p $(BUILD_BOOT_DIR)
 	nasm $< -f elf32 -o $(BUILD_BOOT_DIR)/mbr_boot_asm.o
 
 $(BUILD_BOOT_DIR)/mbr_boot_c.o: boot/mbr_boot.c
-	gcc $(CFLAGS) -nostdinc -fno-builtin -fno-pie -fno-pic -fno-omit-frame-pointer -fno-strict-aliasing -s -c -o $(BUILD_BOOT_DIR)/mbr_boot_c.o $<
+	gcc $(CFLAGS) -nostdinc -fno-builtin -fno-pie -fno-pic -fno-strict-aliasing -O -s -c -o $(BUILD_BOOT_DIR)/mbr_boot_c.o $<
 
 $(BUILD_BOOT_DIR)/mbr_boot.o: $(BUILD_BOOT_DIR)/mbr_boot_asm.o $(BUILD_BOOT_DIR)/mbr_boot_c.o
 	# param explaination:
@@ -69,7 +70,7 @@ $(BUILD_BOOT_DIR)/mbr_boot.bin: $(BUILD_BOOT_DIR)/mbr_boot.o
 
 $(BUILD_BOOT_DIR)/flag_boot_installed: $(BUILD_BOOT_DIR)/mbr_boot.bin $(DISK_IMAGE)
 	# make sure the size is less than 440 bytes
-	[ $(shell stat -c %s $(BUILD_BOOT_DIR)/mbr_boot.bin) -lt 440 ]
+	[ $(shell stat -c %s $(BUILD_BOOT_DIR)/mbr_boot.bin) -le 440 ]
 	dd if=$< of=$(DISK_IMAGE) bs=440 count=1 conv=notrunc
 	touch $@
 
