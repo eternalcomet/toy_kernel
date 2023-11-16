@@ -1,3 +1,5 @@
+#pragma once
+
 typedef char i8;
 typedef short i16;
 typedef int i32;
@@ -13,7 +15,7 @@ typedef double f64;
 
 typedef u8 byte;
 
-typedef u64 uintp;
+typedef u64 u64p;
 
 typedef u64 pde_t;
 

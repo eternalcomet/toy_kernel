@@ -90,13 +90,13 @@ struct segdesc {
 
 // Normal segment
 #define SEG(type, base, lim, dpl) (struct segdesc)    \
-{ ((lim) >> 12) & 0xffff, (uint)(base) & 0xffff,      \
-  ((uintp)(base) >> 16) & 0xff, type, 1, dpl, 1,       \
-  (uintp)(lim) >> 28, 0, 0, 1, 1, (uintp)(base) >> 24 }
+{ ((lim) >> 12) & 0xffff, (u64)(base) & 0xffff,      \
+  ((u64p)(base) >> 16) & 0xff, type, 1, dpl, 1,       \
+  (u64p)(lim) >> 28, 0, 0, 1, 1, (u64p)(base) >> 24 }
 #define SEG16(type, base, lim, dpl) (struct segdesc)  \
-{ (lim) & 0xffff, (uintp)(base) & 0xffff,              \
-  ((uintp)(base) >> 16) & 0xff, type, 1, dpl, 1,       \
-  (uintp)(lim) >> 16, 0, 0, 1, 0, (uintp)(base) >> 24 }
+{ (lim) & 0xffff, (u64p)(base) & 0xffff,              \
+  ((u64p)(base) >> 16) & 0xff, type, 1, dpl, 1,       \
+  (u64p)(lim) >> 16, 0, 0, 1, 0, (u64p)(base) >> 24 }
 
 struct list_head{
   struct list_head *next, *prev;

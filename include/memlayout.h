@@ -14,7 +14,7 @@ static inline void *p2v(u64 a) { return (void *) ((a) + ((u64)KERNBASE)); }
 
 #endif
 
-#define V2P(a) (((uintp) (a)) - KERNBASE)
+#define V2P(a) (((u64p) (a)) - KERNBASE)
 #define P2V(a) (((void *) (a)) + KERNBASE)
 #define IO2V(a) (((void *) (a)) + DEVBASE - DEVSPACE)
 
