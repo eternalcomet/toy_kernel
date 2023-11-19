@@ -5,9 +5,9 @@
 #include "proc.h"
 
 int main(void) {
+  vm_init();
   memblock_init();
   lapic_init();
-  vm_init();
   ioapic_init();
   console_init();
 

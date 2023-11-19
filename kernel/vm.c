@@ -4,8 +4,17 @@
 #include "memlayout.h"
 #include "vm.h"
 
-#define kernelFirstSize
-#define KernelFirstHasMappedEnd
+#define kernelFirstSize 0x4000000
+#define KernelFirstHasMappedEnd  0xFFFFFFFF84000000
+
+static u64* kernPml4;
+static u64* kernPdpt;
+static u64* kernPd;
+static u64* kernPt;
+
+void kernel_switch_vm(void) {
+  lcr3(v2p(kernPml4));
+}
 
 // Return the address of the PTE in pml4
 // that corresponds to virtual address va. If alloc!=0,
@@ -147,8 +156,26 @@ void clear_pteu(u64* pml4, char* va) {
   *pte &= ~PTE_U;
 }
 
+
+// Map memory from 0xFFFFFFFF80000000
+// 64MB
 void vm_init(void) {
-  kernelHasMappedEnd = ;
-  kernelSize = ;
+  kernelHasMappedEnd = KernelFirstHasMappedEnd;
+  kernelSize = kernelFirstSize;
   // Set the new kernel page frame.
+  kernPml4 = memblock_alloc_kernel(PGSIZE, PGSIZE);
+  kernPdpt = memblock_alloc_kernel(PGSIZE, PGSIZE);
+  kernPml4[511] = v2p(kernPdpt) | PTE_W | PTE_P;
+
+  kernPd = memblock_alloc_kernel(PGSIZE, PGSIZE);
+  kernPdpt[510] = v2p(kernPd) | PTE_W | PTE_P;
+  for (u64 pdOffset = 0;pdOffset < 32;pdOffset++) {
+    kernPt = memblock_alloc_kernel(PGSIZE, PGSIZE);
+    kernPd[pdOffset] = v2p(kernPt) | PTE_W | PTE_P;
+    for (u64 ptOffset = 0;ptOffset < 512;ptOffset++) {
+      kernPt[pdOffset] = KERNBASE + 0x200000 * pdOffset + 0x1000 * pdOffset;
+    }
+  }
+
+  kernel_switch_vm();
 }
