@@ -7,6 +7,6 @@ This is a micro-kernel implementation entirely depends on os.
 ## TODOs
 - [X] fix bug
 - [X] trap
-- [ ] makefile
-- [ ] fix bug for compling
-- [ ] endpoint test
+- [X] makefile
+- [X] fix bug for compling
+- [X] endpoint test
