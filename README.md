@@ -10,3 +10,5 @@ This is a micro-kernel implementation entirely depends on os.
 - [X] makefile
 - [X] fix bug for compling
 - [X] endpoint test
+- [ ] mem alloc plugin(slab)
+- [ ] file system
