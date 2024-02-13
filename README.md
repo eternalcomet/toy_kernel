@@ -13,3 +13,4 @@ This is a micro-kernel implementation entirely depends on os.
 - [ ] mem alloc plugin(slab)
 - [ ] file system
 - [ ] page fault handler
+- [ ] network stack
